@@ -26,13 +26,17 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 		mv                move files
 		rm                delete files
 
-## Example
+## Examples
+
+Copy any file containing the words "bob" and "alice"
+
+	$ fbc cp ./ ../bak bob alice
 
 Move text files containing the words "bob" and "alice"
 
 	$ fbc mv ./*.txt ../bak bob alice
 
-or delete text files containing the words "bob" and "alice"
+Delete text files containing the words "bob" and "alice"
 
 	$ fbc rm ./*.txt bob alice
 
