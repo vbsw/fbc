@@ -3,7 +3,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/vbsw/fbc)](https://goreportcard.com/report/github.com/vbsw/fbc) [![Stability: Experimental](https://masterminds.github.io/stability/experimental.svg)](https://masterminds.github.io/stability/experimental.html)
 
 ## About
-fbc (file by content) allows various command on files filtered by their content. fbc is published on <https://github.com/vbsw/fbc>.
+fbc (file by content) allows various commands on files filtered by their content. fbc is published on <https://github.com/vbsw/fbc>.
 
 ## Copyright
 Copyright 2020, Vitali Baumtrok (vbsw@mailbox.org).
@@ -22,7 +22,7 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 		-e, --example     print example
 		--copyright       print copyright
 	COMMAND
-        cp                copy files
+		cp                copy files
 		mv                move files
 		rm                delete files
 
