@@ -51,15 +51,15 @@ type fileProcessorRM struct {
 func newFileProcessor(commandId int) fileProcessor {
 	var processor fileProcessor
 	switch commandId {
-	case CMD_COUNT:
+	case cmd_COUNT:
 		processor = new(fileProcessorCount)
-	case CMD_CP:
+	case cmd_CP:
 		processor = new(fileProcessorCP)
-	case CMD_MV:
+	case cmd_MV:
 		processor = new(fileProcessorMV)
-	case CMD_PRINT:
+	case cmd_PRINT:
 		processor = new(fileProcessorPrint)
-	case CMD_RM:
+	case cmd_RM:
 		processor = new(fileProcessorRM)
 	}
 	return processor

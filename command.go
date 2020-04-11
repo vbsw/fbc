@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	CMD_COUNT = 0
-	CMD_CP    = 1
-	CMD_MV    = 2
-	CMD_PRINT = 3
-	CMD_RM    = 4
+	cmd_COUNT = 0
+	cmd_CP    = 1
+	cmd_MV    = 2
+	cmd_PRINT = 3
+	cmd_RM    = 4
 )
 
 type command struct {
@@ -98,16 +98,16 @@ func (cmd *command) interpretCommand(params *parameters, err error) error {
 	if err == nil {
 		if len(params.commandId) > 0 {
 			switch params.commandId[0].Key {
-			case PARAM_COUNT:
-				cmd.commandId = CMD_COUNT
-			case PARAM_CP:
-				cmd.commandId = CMD_CP
-			case PARAM_MV:
-				cmd.commandId = CMD_MV
-			case PARAM_PRINT:
-				cmd.commandId = CMD_PRINT
-			case PARAM_RM:
-				cmd.commandId = CMD_RM
+			case param_COUNT:
+				cmd.commandId = cmd_COUNT
+			case param_CP:
+				cmd.commandId = cmd_CP
+			case param_MV:
+				cmd.commandId = cmd_MV
+			case param_PRINT:
+				cmd.commandId = cmd_PRINT
+			case param_RM:
+				cmd.commandId = cmd_RM
 			default:
 				err = errors.New("command " + params.commandId[0].Key + " is not implemented")
 			}
