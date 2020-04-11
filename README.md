@@ -14,17 +14,21 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 
 ## Usage
 
-	fbc (INFO | ( COMMAND INPUT-DIR {OUTPUT-DIR CONTENT-FILTER} ))
+	fbc (INFO | ( COMMAND INPUT-DIR {OUTPUT-DIR FILTER OPTION} ))
 
 	INFO
 		-h, --help        print this help
 		-v, --version     print version
 		-e, --example     print example
-		--copyright       print copyright
+		-c, --copyright   print copyright
 	COMMAND
+		count             count files
 		cp                copy files
 		mv                move files
+		print             print file names
 		rm                delete files
+	OPTION
+		-o, --or          filter is OR (not AND)
 
 ## Examples
 
