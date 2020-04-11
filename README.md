@@ -32,17 +32,17 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 
 ## Examples
 
-Copy any file containing the words "bob" and "alice"
+Copy any file containing the words "alice" and "bob"
 
-	$ fbc cp ./ ../bak bob alice
+	$ fbc cp ./ ../bak alice bob
 
-Move text files containing the words "bob" and "alice"
+Move text files containing the words "alice" and "bob"
 
-	$ fbc mv ./*.txt ../bak bob alice
+	$ fbc mv ./*.txt ../bak alice bob
 
-Delete text files containing the words "bob" and "alice"
+Delete text files containing the words "alice" and "bob"
 
-	$ fbc rm ./*.txt bob alice
+	$ fbc rm ./*.txt alice bob
 
 ## References
 - https://golang.org/doc/install
