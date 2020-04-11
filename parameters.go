@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	param_COUNT = "count"
-	param_CP    = "cp"
-	param_MV    = "mv"
-	param_PRINT = "print"
-	param_RM    = "rm"
+	paramCOUNT = "count"
+	paramCP    = "cp"
+	paramMV    = "mv"
+	paramPRINT = "print"
+	paramRM    = "rm"
 )
 
 type parameters struct {
@@ -44,7 +44,7 @@ func parametersFromArgs(args []string) (*parameters, error) {
 		params.example = osArgs.Parse("-e", "--example", "-example", "example")
 		params.copyright = osArgs.Parse("-c", "--copyright", "-copyright", "copyright")
 		params.or = osArgs.Parse("-o", "--or", "-or", "or")
-		params.commandId = osArgs.Parse(param_COUNT, param_CP, param_MV, param_PRINT, param_RM)
+		params.commandId = osArgs.Parse(paramCOUNT, paramCP, paramMV, paramPRINT, paramRM)
 		params.recursive = osArgs.Parse("-r", "--recursive", "-recursive", "recursive")
 
 		// no need for it (only noise? also conflict with "-o" parameter)
@@ -127,7 +127,7 @@ func (params *parameters) oneParamHasMultipleResults() bool {
 func (params *parameters) isOutputDirNeeded() bool {
 	if len(params.commandId) > 0 {
 		commandId := params.commandId[0].Key
-		if commandId == param_CP || commandId == param_MV {
+		if commandId == paramCP || commandId == paramMV {
 			return true
 		}
 	}
