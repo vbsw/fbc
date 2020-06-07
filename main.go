@@ -5,6 +5,7 @@
  *        http://www.boost.org/LICENSE_1_0.txt)
  */
 
+// Package fbc is compiled to an executable. It allows various commands on files filtered by their content.
 package main
 
 import (

@@ -1,6 +1,6 @@
 # fbc
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/vbsw/fbc)](https://goreportcard.com/report/github.com/vbsw/fbc) [![Stability: Experimental](https://masterminds.github.io/stability/experimental.svg)](https://masterminds.github.io/stability/experimental.html)
+[![GoDoc](https://godoc.org/github.com/vbsw/fbc?status.svg)](https://godoc.org/github.com/vbsw/fbc) [![Go Report Card](https://goreportcard.com/badge/github.com/vbsw/fbc)](https://goreportcard.com/report/github.com/vbsw/fbc) [![Stability: Experimental](https://masterminds.github.io/stability/experimental.svg)](https://masterminds.github.io/stability/experimental.html)
 
 ## About
 fbc (file by content) allows various commands on files filtered by their content. fbc is published on <https://github.com/vbsw/fbc> and <https://gitlab.com/vbsw/fbc>.
