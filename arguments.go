@@ -56,7 +56,7 @@ func argumentsFromCL(osArgs []string) (*arguments, error) {
 		unparsedArgs := cmdLine.UnparsedArgsIndices()
 		unparsedArgs = args.parseInput(cmdLine, unparsedArgs)
 		unparsedArgs = args.parseOutput(cmdLine, unparsedArgs)
-		unparsedArgs = args.parseFilter(cmdLine, unparsedArgs)
+		args.parseFilter(cmdLine, unparsedArgs)
 	}
 	return args, err
 }

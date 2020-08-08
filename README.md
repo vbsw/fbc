@@ -5,7 +5,7 @@
 ## About
 fbc (file by content) allows various commands on files filtered by their content. fbc is published on <https://github.com/vbsw/fbc> and <https://gitlab.com/vbsw/fbc>.
 
-[Download binaries](https://github.com/vbsw/fbc/archive/bin.zip)
+Download [binaries](https://github.com/vbsw/fbc/archive/bin.zip).
 
 ## Copyright
 Copyright 2020, Vitali Baumtrok (vbsw@mailbox.org).
