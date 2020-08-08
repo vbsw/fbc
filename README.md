@@ -29,6 +29,7 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 		rm                delete files
 	OPTION
 		-o, --or          filter is OR (not AND)
+		-r, --recursive   recursive file iteration
 
 ## Examples
 
