@@ -28,7 +28,8 @@ func messageHelp() string {
 	message += "  print            print file names\n"
 	message += "  rm               delete files\n"
 	message += "OPTION\n"
-	message += "  -o, --or         filter is OR (not AND)"
+	message += "  -o, --or         filter is OR (not AND)\n"
+	message += "  -r, --recursive  recursive file iteration"
 	return message
 }
 

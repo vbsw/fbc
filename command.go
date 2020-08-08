@@ -38,78 +38,78 @@ func commandFromOSArgs() (*command, error) {
 	return commandFromArgs(os.Args[1:])
 }
 
-func commandFromArgs(args []string) (*command, error) {
+func commandFromArgs(osArgs []string) (*command, error) {
 	var cmd *command
-	params, err := parametersFromArgs(args)
+	args, err := argumentsFromCL(osArgs)
 
 	if err == nil {
-		if params == nil {
+		if args == nil {
 			cmd = new(command)
 			cmd.info = true
 			cmd.infoMessage = messageShortInfo()
 
-		} else if params.incompatibleArguments() {
+		} else if args.incompatibleArguments() {
 			err = errors.New("wrong argument usage")
 
-		} else if params.oneParamHasMultipleResults() {
+		} else if args.oneParamHasMultipleResults() {
 			err = errors.New("wrong argument usage")
 
 		} else {
 			cmd = new(command)
-			err = cmd.initFromParams(params)
+			err = cmd.initFromParams(args)
 		}
 	}
 	return cmd, err
 }
 
-func (cmd *command) initFromParams(params *parameters) error {
+func (cmd *command) initFromParams(args *arguments) error {
 	var err error
 
-	if len(params.help) > 0 {
+	if len(args.help) > 0 {
 		cmd.info = true
 		cmd.infoMessage = messageHelp()
 
-	} else if len(params.version) > 0 {
+	} else if len(args.version) > 0 {
 		cmd.info = true
 		cmd.infoMessage = messageVersion()
 
-	} else if len(params.example) > 0 {
+	} else if len(args.example) > 0 {
 		cmd.info = true
 		cmd.infoMessage = messageExample()
 
-	} else if len(params.copyright) > 0 {
+	} else if len(args.copyright) > 0 {
 		cmd.info = true
 		cmd.infoMessage = messageCopyright()
 
 	} else {
-		cmd.recursive = len(params.recursive) > 0
-		cmd.or = len(params.or) > 0
-		cmd.contentFilter = paramsToStringArray(params.filter)
-		err = cmd.interpretCommand(params, err)
-		err = cmd.interpretFileNameFilter(params, err)
-		err = cmd.interpretInput(params, err)
-		err = cmd.interpretOutput(params, err)
+		cmd.recursive = len(args.recursive) > 0
+		cmd.or = len(args.or) > 0
+		cmd.contentFilter = argsToStringArray(args.filter)
+		err = cmd.interpretCommand(args, err)
+		err = cmd.interpretFileNameFilter(args, err)
+		err = cmd.interpretInput(args, err)
+		err = cmd.interpretOutput(args, err)
 		err = cmd.checkIODirectories(err)
 	}
 	return err
 }
 
-func (cmd *command) interpretCommand(params *parameters, err error) error {
+func (cmd *command) interpretCommand(args *arguments, err error) error {
 	if err == nil {
-		if len(params.commandId) > 0 {
-			switch params.commandId[0].Key {
-			case paramCOUNT:
+		if len(args.commandId) > 0 {
+			switch args.commandId[0].Key {
+			case argCOUNT:
 				cmd.commandId = cmdCOUNT
-			case paramCP:
+			case argCP:
 				cmd.commandId = cmdCP
-			case paramMV:
+			case argMV:
 				cmd.commandId = cmdMV
-			case paramPRINT:
+			case argPRINT:
 				cmd.commandId = cmdPRINT
-			case paramRM:
+			case argRM:
 				cmd.commandId = cmdRM
 			default:
-				err = errors.New("command " + params.commandId[0].Key + " is not implemented")
+				err = errors.New("command " + args.commandId[0].Key + " is not implemented")
 			}
 		} else {
 			err = errors.New("wrong command")
@@ -118,9 +118,9 @@ func (cmd *command) interpretCommand(params *parameters, err error) error {
 	return err
 }
 
-func (cmd *command) interpretFileNameFilter(params *parameters, err error) error {
-	if err == nil && len(params.input) > 0 {
-		input := ensurePathWithSlash(params.input[0].Value)
+func (cmd *command) interpretFileNameFilter(args *arguments, err error) error {
+	if err == nil && len(args.input) > 0 {
+		input := ensurePathWithSlash(args.input[0].Value)
 		inputSlash := firstSlash(input)
 
 		// assume it's current directory
@@ -134,11 +134,11 @@ func (cmd *command) interpretFileNameFilter(params *parameters, err error) error
 		if len(input) > inputSlashEnd && checkfile.IsDirectory(input) {
 			input += string(inputSlash)
 			cmd.inputFilter = "*"
-			params.input[0].Value = input
+			args.input[0].Value = input
 
 		} else {
 			cmd.inputFilter = input[inputSlashEnd:]
-			params.input[0].Value = input[:inputSlashEnd]
+			args.input[0].Value = input[:inputSlashEnd]
 
 			if len(cmd.inputFilter) == 0 {
 				cmd.inputFilter = "*"
@@ -148,10 +148,10 @@ func (cmd *command) interpretFileNameFilter(params *parameters, err error) error
 	return err
 }
 
-func (cmd *command) interpretInput(params *parameters, err error) error {
+func (cmd *command) interpretInput(args *arguments, err error) error {
 	if err == nil {
-		if len(params.input) > 0 {
-			input := params.input[0].Value
+		if len(args.input) > 0 {
+			input := args.input[0].Value
 			fileInfo, statErr := os.Stat(input)
 
 			if statErr == nil || !os.IsNotExist(statErr) {
@@ -176,10 +176,10 @@ func (cmd *command) interpretInput(params *parameters, err error) error {
 	return err
 }
 
-func (cmd *command) interpretOutput(params *parameters, err error) error {
+func (cmd *command) interpretOutput(args *arguments, err error) error {
 	if err == nil {
-		if len(params.output) > 0 {
-			output := params.output[0].Value
+		if len(args.output) > 0 {
+			output := args.output[0].Value
 			fileInfo, statErr := os.Stat(output)
 
 			if statErr == nil || !os.IsNotExist(statErr) {
@@ -196,7 +196,7 @@ func (cmd *command) interpretOutput(params *parameters, err error) error {
 			} else {
 				err = errors.New("output directory does not exist")
 			}
-		} else if params.isOutputDirNeeded() {
+		} else if args.isOutputDirNeeded() {
 			err = errors.New("output directory is not specified")
 		}
 	}

@@ -20,7 +20,7 @@ import (
 type fileProcessor interface {
 	// processFile is called for every file matching the criteria.
 	// If returned value != nil, iteration is stopped.
-	processFile(*command, os.FileInfo) error
+	processFile(*command, string, os.FileInfo) error
 
 	// summary is called after all files have been processed or
 	// an error occurred. count is the number of files processed.
@@ -35,10 +35,11 @@ type fileProcessorCount struct {
 
 type fileProcessorCP struct {
 	fileProcessorDefault
+	existingDirs []string
 }
 
 type fileProcessorMV struct {
-	fileProcessorDefault
+	fileProcessorCP
 }
 
 type fileProcessorPrint struct {
@@ -54,9 +55,13 @@ func newFileProcessor(commandId int) fileProcessor {
 	case cmdCOUNT:
 		processor = new(fileProcessorCount)
 	case cmdCP:
-		processor = new(fileProcessorCP)
+		processorCP := new(fileProcessorCP)
+		processorCP.existingDirs = make([]string, 0, 16)
+		processor = processorCP
 	case cmdMV:
-		processor = new(fileProcessorMV)
+		processorMV := new(fileProcessorMV)
+		processorMV.existingDirs = make([]string, 0, 16)
+		processor = processorMV
 	case cmdPRINT:
 		processor = new(fileProcessorPrint)
 	case cmdRM:
@@ -65,8 +70,8 @@ func newFileProcessor(commandId int) fileProcessor {
 	return processor
 }
 
-func (fileProc *fileProcessorDefault) processFile(cmd *command, fileInfo os.FileInfo) error {
-	fmt.Println(cmd.inputDir + fileInfo.Name())
+func (fileProc *fileProcessorDefault) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+	fmt.Println(path)
 	return nil
 }
 
@@ -78,26 +83,32 @@ func (fileProc *fileProcessorDefault) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorCount) processFile(cmd *command, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCount) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
 	return nil
 }
 
 func (fileProc *fileProcessorCount) summary(count int, err error) {
-	fmt.Println(count)
+	if err == nil {
+		fmt.Println(count)
+	} else {
+		fmt.Println(messageError(err))
+	}
 }
 
-func (fileProc *fileProcessorCP) processFile(cmd *command, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCP) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
 	var err error
-	inputPath := filepath.Join(cmd.inputDir, fileInfo.Name())
+	var inputFile *os.File
+	inputFile, err = os.Open(path)
 
 	if err == nil {
-		var inputFile *os.File
-		inputFile, err = os.Open(inputPath)
+		var outputFile *os.File
+		defer inputFile.Close()
+		subDir := path[len(cmd.inputDir) : len(path)-len(fileInfo.Name())]
+		outputPath := filepath.Join(cmd.outputDir, subDir)
+		err = fileProc.ensureDir(outputPath)
 
 		if err == nil {
-			var outputFile *os.File
-			defer inputFile.Close()
-			outputPath := filepath.Join(cmd.outputDir, fileInfo.Name())
+			outputPath = filepath.Join(outputPath, fileInfo.Name())
 
 			if !checkfile.Exists(outputPath) {
 				outputFile, err = os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
@@ -114,29 +125,56 @@ func (fileProc *fileProcessorCP) processFile(cmd *command, fileInfo os.FileInfo)
 	return err
 }
 
-func (fileProc *fileProcessorMV) processFile(cmd *command, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCP) ensureDir(dir string) error {
 	var err error
-	inputPath := filepath.Join(cmd.inputDir, fileInfo.Name())
-	outputPath := filepath.Join(cmd.outputDir, fileInfo.Name())
+	exists := false
 
-	if !checkfile.Exists(outputPath) {
-		err = os.Rename(inputPath, outputPath)
-	} else {
-		err = errors.New("target file or directory already exists: " + fileInfo.Name())
+	for _, existingDir := range fileProc.existingDirs {
+		if existingDir == dir {
+			exists = true
+			break
+		}
+	}
+	if !exists {
+		fileProc.existingDirs = append(fileProc.existingDirs, dir)
+
+		if !checkfile.Exists(dir) {
+			err = os.MkdirAll(dir, 0666)
+		}
 	}
 	return err
 }
 
-func (fileProc *fileProcessorPrint) processFile(cmd *command, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorMV) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+	var err error
+	subDir := path[len(cmd.inputDir) : len(path)-len(fileInfo.Name())]
+	outputPath := filepath.Join(cmd.outputDir, subDir)
+	err = fileProc.ensureDir(outputPath)
+
+	if err == nil {
+		outputPath = filepath.Join(outputPath, fileInfo.Name())
+
+		if !checkfile.Exists(outputPath) {
+			err = os.Rename(path, outputPath)
+		} else {
+			err = errors.New("target file or directory already exists: " + fileInfo.Name())
+		}
+	}
+	return err
+}
+
+func (fileProc *fileProcessorPrint) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
 	fmt.Println(fileInfo.Name())
 	return nil
 }
 
 func (fileProc *fileProcessorPrint) summary(count int, err error) {
+	if err != nil {
+		fmt.Println(messageError(err))
+	}
 }
 
-func (fileProc *fileProcessorRM) processFile(cmd *command, fileInfo os.FileInfo) error {
-	inputPath := filepath.Join(cmd.inputDir, fileInfo.Name())
-	err := os.Remove(inputPath)
+func (fileProc *fileProcessorRM) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+	err := os.Remove(path)
 	return err
 }
