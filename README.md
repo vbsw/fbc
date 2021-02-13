@@ -8,7 +8,7 @@ fbc (file by content) allows various commands on files filtered by their content
 Download [binaries](https://github.com/vbsw/fbc/archive/bin.zip).
 
 ## Copyright
-Copyright 2020, Vitali Baumtrok (vbsw@mailbox.org).
+Copyright 2020, 2021, Vitali Baumtrok (vbsw@mailbox.org).
 
 fbc is distributed under the Boost Software License, version 1.0. (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -41,11 +41,11 @@ Copy any file containing the words "alice" and "bob"
 
 Move text files containing the words "alice" and "bob"
 
-	$ fbc mv ./*.txt ../bak alice bob
+	$ fbc mv "./*.txt" ../bak alice bob
 
 Delete text files containing the words "alice" and "bob"
 
-	$ fbc rm ./*.txt alice bob
+	$ fbc rm "./*.txt" alice bob
 
 ## References
 - https://golang.org/doc/install
