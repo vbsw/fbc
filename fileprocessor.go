@@ -20,7 +20,7 @@ import (
 type fileProcessor interface {
 	// processFile is called for every file matching the criteria.
 	// If returned value != nil, iteration is stopped.
-	processFile(*command, string, os.FileInfo) error
+	processFile(*arguments, string, os.FileInfo) error
 
 	// summary is called after all files have been processed or
 	// an error occurred. count is the number of files processed.
@@ -49,28 +49,28 @@ type fileProcessorRM struct {
 	fileProcessorDefault
 }
 
-func newFileProcessor(commandId int) fileProcessor {
+func newFileProcessor(command string) fileProcessor {
 	var processor fileProcessor
-	switch commandId {
-	case cmdCOUNT:
+	switch command {
+	case argCOUNT:
 		processor = new(fileProcessorCount)
-	case cmdCP:
+	case argCP:
 		processorCP := new(fileProcessorCP)
 		processorCP.existingDirs = make([]string, 0, 16)
 		processor = processorCP
-	case cmdMV:
+	case argMV:
 		processorMV := new(fileProcessorMV)
 		processorMV.existingDirs = make([]string, 0, 16)
 		processor = processorMV
-	case cmdPRINT:
+	case argPRINT:
 		processor = new(fileProcessorPrint)
-	case cmdRM:
+	case argRM:
 		processor = new(fileProcessorRM)
 	}
 	return processor
 }
 
-func (fileProc *fileProcessorDefault) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorDefault) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
 	fmt.Println(path)
 	return nil
 }
@@ -83,7 +83,7 @@ func (fileProc *fileProcessorDefault) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorCount) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCount) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (fileProc *fileProcessorCount) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorCP) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCP) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
 	var err error
 	var inputFile *os.File
 	inputFile, err = os.Open(path)
@@ -103,8 +103,10 @@ func (fileProc *fileProcessorCP) processFile(cmd *command, path string, fileInfo
 	if err == nil {
 		var outputFile *os.File
 		defer inputFile.Close()
-		subDir := path[len(cmd.inputDir) : len(path)-len(fileInfo.Name())]
-		outputPath := filepath.Join(cmd.outputDir, subDir)
+		inputDir := args.input.Values()[0]
+		outputDir := args.output.Values()[0]
+		subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
+		outputPath := filepath.Join(outputDir, subDir)
 		err = fileProc.ensureDir(outputPath)
 
 		if err == nil {
@@ -145,10 +147,12 @@ func (fileProc *fileProcessorCP) ensureDir(dir string) error {
 	return err
 }
 
-func (fileProc *fileProcessorMV) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorMV) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
 	var err error
-	subDir := path[len(cmd.inputDir) : len(path)-len(fileInfo.Name())]
-	outputPath := filepath.Join(cmd.outputDir, subDir)
+	inputDir := args.input.Values()[0]
+	outputDir := args.output.Values()[0]
+	subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
+	outputPath := filepath.Join(outputDir, subDir)
 	err = fileProc.ensureDir(outputPath)
 
 	if err == nil {
@@ -163,7 +167,7 @@ func (fileProc *fileProcessorMV) processFile(cmd *command, path string, fileInfo
 	return err
 }
 
-func (fileProc *fileProcessorPrint) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorPrint) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
 	fmt.Println(fileInfo.Name())
 	return nil
 }
@@ -174,7 +178,7 @@ func (fileProc *fileProcessorPrint) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorRM) processFile(cmd *command, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorRM) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
 	err := os.Remove(path)
 	return err
 }

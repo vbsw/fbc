@@ -1,5 +1,5 @@
 /*
- *          Copyright 2020, Vitali Baumtrok.
+ *        Copyright 2020, 2021 Vitali Baumtrok.
  * Distributed under the Boost Software License, Version 1.0.
  *     (See accompanying file LICENSE or copy at
  *        http://www.boost.org/LICENSE_1_0.txt)
@@ -29,12 +29,13 @@ func messageHelp() string {
 	message += "  rm               delete files\n"
 	message += "OPTION\n"
 	message += "  -o, --or         filter is OR (not AND)\n"
-	message += "  -r, --recursive  recursive file iteration"
+	message += "  -r, --recursive  recursive file iteration\n"
+	message += "  -s, --silent     don't output errors to screen when reading files"
 	return message
 }
 
 func messageVersion() string {
-	return "1.0.0"
+	return "1.1.0"
 }
 
 func messageExample() string {
@@ -63,4 +64,8 @@ func messageFinished(count int) string {
 
 func messageError(err error) string {
 	return "error: " + err.Error()
+}
+
+func messageWarning(err error) string {
+	return "warning: " + err.Error()
 }

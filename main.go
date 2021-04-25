@@ -17,15 +17,16 @@ import (
 )
 
 func main() {
-	cmd, err := commandFromOSArgs()
+	args := new(arguments)
+	err := args.parseCommandLine(os.Args[1:])
 
 	if err == nil {
-		if cmd.info {
-			fmt.Println(cmd.infoMessage)
+		if args.infoAvailable() {
+			args.printInfo()
 
 		} else {
-			fileProc := newFileProcessor(cmd.commandId)
-			iterate(cmd, fileProc)
+			fileProc := newFileProcessor(args.command.Keys()[0])
+			iterate(args, fileProc)
 		}
 	} else {
 		fmt.Println(messageError(err))
@@ -35,41 +36,50 @@ func main() {
 // iterate iterates over files calling fileProc.processFile for each file
 // matching the criteria. If fileProc.processFile returns error != nil,
 // then processing is stopped.
-func iterate(cmd *command, fileProc fileProcessor) error {
+func iterate(args *arguments, fileProc fileProcessor) error {
 	var err error
 
 	if fileProc == nil {
 		fileProc = new(fileProcessorDefault)
 	}
-	if cmd.recursive {
-		err = iterateRecursive(cmd, fileProc)
+	if args.recursive.Available() {
+		err = iterateRecursive(args, fileProc)
 
 	} else {
-		err = iterateFlat(cmd, fileProc)
+		err = iterateFlat(args, fileProc)
 	}
 	return err
 }
 
-func iterateRecursive(cmd *command, fileProc fileProcessor) error {
-	filterParts := splitStringByStar(cmd.inputFilter)
-	buffer := checkfile.NewTermsBuffer(1024*1024*4, cmd.contentFilter)
+func iterateRecursive(args *arguments, fileProc fileProcessor) error {
+	inputDir := args.input.Values()[0]
+	byOr := args.or.Available()
+	silent := args.silent.Available()
+	filterParts := splitStringByStar(args.inputFilter)
+	buffer := checkfile.NewTermsBuffer(1024*1024*4, args.contentFilter)
 	count := 0
-
-	err := filepath.Walk(cmd.inputDir, func(path string, fileInfo os.FileInfo, err error) error {
+	err := filepath.Walk(inputDir, func(path string, fileInfo os.FileInfo, err error) error {
 		if err == nil {
-			// input directory is considered to be a file; don't process it
-			if len(path) > len(cmd.inputDir) {
+			// avoid input directory as input file
+			if len(path) > len(inputDir) {
 				var match bool
-				match, err = isFileMatch(cmd, path, fileInfo, filterParts, buffer)
+				match, err = isFileMatch(byOr, path, fileInfo, filterParts, buffer)
 
 				if match && err == nil {
-					err = fileProc.processFile(cmd, path, fileInfo)
+					err = fileProc.processFile(args, path, fileInfo)
 
 					if err == nil {
 						count++
 					}
 				}
 			}
+		}
+		// ignore errors
+		if err != nil {
+			if !silent {
+				fmt.Println(messageWarning(err))
+			}
+			err = nil
 		}
 		return err
 	})
@@ -78,48 +88,49 @@ func iterateRecursive(cmd *command, fileProc fileProcessor) error {
 	return err
 }
 
-func iterateFlat(cmd *command, fileProc fileProcessor) error {
-	dir, err := os.Open(cmd.inputDir)
+func iterateFlat(args *arguments, fileProc fileProcessor) error {
+	inputDir := args.input.Values()[0]
+	byOr := args.or.Available()
+	silent := args.silent.Available()
+	filterParts := splitStringByStar(args.inputFilter)
+	buffer := checkfile.NewTermsBuffer(1024*1024*4, args.contentFilter)
 	count := 0
-
-	if err == nil {
-		var fileInfos []os.FileInfo
-		fileInfos, err = dir.Readdir(0)
-		dir.Close()
-
+	err := filepath.Walk(inputDir, func(path string, fileInfo os.FileInfo, err error) error {
 		if err == nil {
-			filterParts := splitStringByStar(cmd.inputFilter)
-			buffer := checkfile.NewTermsBuffer(1024*1024*4, cmd.contentFilter)
-
-			for _, fileInfo := range fileInfos {
+			// avoid input directory as input file; parent must be input directory
+			if len(path) > len(inputDir) && len(filepath.Dir(path)) == len(inputDir) {
 				var match bool
-				path := filepath.Join(cmd.inputDir, fileInfo.Name())
-				match, err = isFileMatch(cmd, path, fileInfo, filterParts, buffer)
+				match, err = isFileMatch(byOr, path, fileInfo, filterParts, buffer)
 
-				if err == nil && match {
-					err = fileProc.processFile(cmd, path, fileInfo)
+				if match && err == nil {
+					err = fileProc.processFile(args, path, fileInfo)
 
 					if err == nil {
 						count++
 					}
 				}
-				if err != nil {
-					break
-				}
 			}
 		}
-	}
+		// ignore errors
+		if err != nil {
+			if !silent {
+				fmt.Println(messageWarning(err))
+			}
+			err = nil
+		}
+		return err
+	})
 	fileProc.summary(count, err)
 
 	return err
 }
 
-func isFileMatch(cmd *command, path string, fileInfo os.FileInfo, filterParts [][]byte, buffer *checkfile.TermsBuffer) (bool, error) {
+func isFileMatch(byOr bool, path string, fileInfo os.FileInfo, filterParts [][]byte, buffer *checkfile.TermsBuffer) (bool, error) {
 	var match bool
 	var err error
 
 	if !fileInfo.IsDir() && isNameMatch(fileInfo.Name(), filterParts) {
-		if cmd.or {
+		if byOr {
 			match, err = checkfile.ContainsAny(path, buffer)
 		} else {
 			match, err = checkfile.ContainsAll(path, buffer)
