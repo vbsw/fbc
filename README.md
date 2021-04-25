@@ -30,7 +30,7 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 	OPTION
 		-o, --or          filter is OR (not AND)
 		-r, --recursive   recursive file iteration
-		-s, --silent      don't output errors to screen when reading files
+		-s, --silent      no error output when reading files
 
 ## Examples
 
