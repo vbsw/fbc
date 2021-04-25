@@ -6,7 +6,7 @@
 fbc (file by content) allows various commands on files filtered by their content. fbc is published on <https://github.com/vbsw/fbc> and <https://gitlab.com/vbsw/fbc>.
 
 ## Copyright
-Copyright 2020, Vitali Baumtrok (vbsw@mailbox.org).
+Copyright 2020, 2021, Vitali Baumtrok (vbsw@mailbox.org).
 
 fbc is distributed under the Boost Software License, version 1.0. (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
@@ -30,6 +30,7 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 	OPTION
 		-o, --or          filter is OR (not AND)
 		-r, --recursive   recursive file iteration
+		-s, --silent      don't output errors to screen when reading files
 
 ## Examples
 
@@ -39,11 +40,11 @@ Copy any file containing the words "alice" and "bob"
 
 Move text files containing the words "alice" and "bob"
 
-	$ fbc mv ./*.txt ../bak alice bob
+	$ fbc mv "./*.txt" ../bak alice bob
 
 Delete text files containing the words "alice" and "bob"
 
-	$ fbc rm ./*.txt alice bob
+	$ fbc rm "./*.txt" alice bob
 
 ## References
 - https://golang.org/doc/install
