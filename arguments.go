@@ -10,7 +10,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/vbsw/cmdl"
+	"github.com/vbsw/osargs"
 	"os"
 	"path/filepath"
 	"unsafe"
@@ -26,17 +26,17 @@ const (
 )
 
 type arguments struct {
-	help          *cmdl.Parameter
-	version       *cmdl.Parameter
-	example       *cmdl.Parameter
-	copyright     *cmdl.Parameter
-	or            *cmdl.Parameter
-	silent        *cmdl.Parameter
-	command       *cmdl.Parameter
-	recursive     *cmdl.Parameter
-	filter        *cmdl.Parameter
-	input         *cmdl.Parameter
-	output        *cmdl.Parameter
+	help          *osargs.Result
+	version       *osargs.Result
+	example       *osargs.Result
+	copyright     *osargs.Result
+	or            *osargs.Result
+	silent        *osargs.Result
+	command       *osargs.Result
+	recursive     *osargs.Result
+	filter        *osargs.Result
+	input         *osargs.Result
+	output        *osargs.Result
 	contentFilter []string
 	inputFilter   string
 }
@@ -44,18 +44,20 @@ type arguments struct {
 func (args *arguments) parseCommandLine(clArgs []string) error {
 	var err error
 	if len(clArgs) > 0 {
-		cl := cmdl.NewFrom(clArgs)
-		args.help = cl.NewParam().Parse("-h", "--help", "-help", "help")
-		args.version = cl.NewParam().Parse("-v", "--version", "-version", "version")
-		args.example = cl.NewParam().Parse("-e", "--example", "-example", "example")
-		args.copyright = cl.NewParam().Parse("-c", "--copyright", "-copyright", "copyright")
-		args.or = cl.NewParam().Parse("-o", "--or", "-or", "or")
-		args.silent = cl.NewParam().Parse("-s", "--silent", "-silent", "silent")
-		args.command = cl.NewParam().Parse(argCOUNT, argCP, argMV, argPRINT, argRM)
-		args.recursive = cl.NewParam().Parse("-r", "--recursive", "-recursive", "recursive")
-		args.filter = cl.NewParam()
-		args.input = cl.NewParam()
-		args.output = cl.NewParam()
+		cl := new(osargs.Arguments)
+		cl.Values = clArgs
+		cl.Parsed = make([]bool, len(cl.Values))
+		args.help = cl.Parse("-h", "--help", "-help", "help")
+		args.version = cl.Parse("-v", "--version", "-version", "version")
+		args.example = cl.Parse("-e", "--example", "-example", "example")
+		args.copyright = cl.Parse("-c", "--copyright", "-copyright", "copyright")
+		args.or = cl.Parse("-o", "--or", "-or", "or")
+		args.silent = cl.Parse("-s", "--silent", "-silent", "silent")
+		args.command = cl.Parse(argCOUNT, argCP, argMV, argPRINT, argRM)
+		args.recursive = cl.Parse("-r", "--recursive", "-recursive", "recursive")
+		args.filter = new(osargs.Result)
+		args.input = new(osargs.Result)
+		args.output = new(osargs.Result)
 
 		unparsedCLArgs := cl.UnparsedArgs()
 		unparsedCLArgs = parseInput(args, unparsedCLArgs)
@@ -68,8 +70,8 @@ func (args *arguments) parseCommandLine(clArgs []string) error {
 	return err
 }
 
-func (args *arguments) infoParameters() []*cmdl.Parameter {
-	infoParams := make([]*cmdl.Parameter, 4)
+func (args *arguments) infoParameters() []*osargs.Result {
+	infoParams := make([]*osargs.Result, 4)
 	infoParams[0] = args.help
 	infoParams[1] = args.version
 	infoParams[2] = args.example
@@ -77,8 +79,8 @@ func (args *arguments) infoParameters() []*cmdl.Parameter {
 	return infoParams
 }
 
-func (args *arguments) commandParameters() []*cmdl.Parameter {
-	cmdParams := make([]*cmdl.Parameter, 6)
+func (args *arguments) commandParameters() []*osargs.Result {
+	cmdParams := make([]*osargs.Result, 6)
 	cmdParams[0] = args.command
 	cmdParams[1] = args.filter
 	cmdParams[2] = args.input
@@ -123,7 +125,7 @@ func parseInput(args *arguments, unparsedCLArgs []string) []string {
 				panic(err.Error())
 			}
 		}
-		args.input.Add(keyNONE, inputPath)
+		args.input.Values = append(args.input.Values, inputPath)
 		return unparsedCLArgs[1:]
 	}
 	return unparsedCLArgs
@@ -141,7 +143,7 @@ func parseOutput(args *arguments, unparsedCLArgs []string) []string {
 				panic(err.Error())
 			}
 		}
-		args.output.Add(keyNONE, outputPath)
+		args.output.Values = append(args.output.Values, outputPath)
 		return unparsedCLArgs[1:]
 	}
 	return unparsedCLArgs
@@ -149,7 +151,7 @@ func parseOutput(args *arguments, unparsedCLArgs []string) []string {
 
 func outputDirNeeded(args *arguments) bool {
 	if args.command.Available() {
-		command := args.command.Keys()[0]
+		command := args.command.Values[0]
 		if command == argCP || command == argMV {
 			return true
 		}
@@ -159,10 +161,10 @@ func outputDirNeeded(args *arguments) bool {
 
 func parseFilter(args *arguments, unparsedCLArgs []string) {
 	for _, unparsedCLArg := range unparsedCLArgs {
-		args.filter.Add(keyNONE, unparsedCLArg)
+		args.filter.Values = append(args.filter.Values, unparsedCLArg)
 	}
 	args.contentFilter = make([]string, 0, args.filter.Count())
-	for _, value := range args.filter.Values() {
+	for _, value := range args.filter.Values {
 		if len(value) > 0 {
 			args.contentFilter = append(args.contentFilter, value)
 		}
@@ -171,7 +173,7 @@ func parseFilter(args *arguments, unparsedCLArgs []string) {
 
 func parseInputFilter(args *arguments) {
 	if args.input.Available() {
-		input := args.input.Values()[0]
+		input := args.input.Values[0]
 		separator := pathSeparator(input)
 
 		if separator == 0 {
@@ -185,9 +187,9 @@ func parseInputFilter(args *arguments) {
 			input = input[:fileNameBegin]
 			args.inputFilter = fileName
 			if len(input) > 0 {
-				args.input.Values()[0] = input
+				args.input.Values[0] = input
 			} else {
-				args.input.Values()[0] = "."
+				args.input.Values[0] = "."
 			}
 		} else {
 			args.inputFilter = "*"
@@ -241,19 +243,19 @@ func validateIODirectories(args *arguments) error {
 	} else if outputDirNeeded(args) && !args.output.Available() {
 		err = errors.New("output directory is not specified")
 	} else {
-		err = validateDirectory(args.input.Values()[0], "input")
+		err = validateDirectory(args.input.Values[0], "input")
 		if err == nil && args.output.Available() {
-			err = validateDirectory(args.output.Values()[0], "output")
+			err = validateDirectory(args.output.Values[0], "output")
 			if err == nil {
 				var input string
-				input, err = filepath.Abs(args.input.Values()[0])
+				input, err = filepath.Abs(args.input.Values[0])
 				if err == nil {
 					var output string
-					output, err = filepath.Abs(args.output.Values()[0])
+					output, err = filepath.Abs(args.output.Values[0])
 					if err == nil {
 						if input != output {
-							args.input.Values()[0] = input
-							args.output.Values()[0] = output
+							args.input.Values[0] = input
+							args.output.Values[0] = output
 						} else {
 							err = errors.New("input and output directories are the same")
 						}
@@ -282,7 +284,7 @@ func validateDirectory(path, dirTypeName string) error {
 	return err
 }
 
-func parametersIncompatible(infoParams, cmdParams []*cmdl.Parameter) bool {
+func parametersIncompatible(infoParams, cmdParams []*osargs.Result) bool {
 	var cmdAvailable bool
 	for _, cmdParam := range cmdParams {
 		cmdAvailable = cmdAvailable || cmdParam.Available()
@@ -305,7 +307,7 @@ func parametersIncompatible(infoParams, cmdParams []*cmdl.Parameter) bool {
 }
 
 func parametersMultiple(args *arguments) bool {
-	params := make([]*cmdl.Parameter, 10)
+	params := make([]*osargs.Result, 10)
 	params[0] = args.command
 	params[1] = args.copyright
 	params[2] = args.example
@@ -324,7 +326,7 @@ func parametersMultiple(args *arguments) bool {
 	return false
 }
 
-func anyAvailable(params []*cmdl.Parameter) bool {
+func anyAvailable(params []*osargs.Result) bool {
 	for _, param := range params {
 		if param.Available() {
 			return true

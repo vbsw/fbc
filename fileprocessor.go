@@ -103,8 +103,8 @@ func (fileProc *fileProcessorCP) processFile(args *arguments, path string, fileI
 	if err == nil {
 		var outputFile *os.File
 		defer inputFile.Close()
-		inputDir := args.input.Values()[0]
-		outputDir := args.output.Values()[0]
+		inputDir := args.input.Values[0]
+		outputDir := args.output.Values[0]
 		subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
 		outputPath := filepath.Join(outputDir, subDir)
 		err = fileProc.ensureDir(outputPath)
@@ -149,8 +149,8 @@ func (fileProc *fileProcessorCP) ensureDir(dir string) error {
 
 func (fileProc *fileProcessorMV) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
 	var err error
-	inputDir := args.input.Values()[0]
-	outputDir := args.output.Values()[0]
+	inputDir := args.input.Values[0]
+	outputDir := args.output.Values[0]
 	subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
 	outputPath := filepath.Join(outputDir, subDir)
 	err = fileProc.ensureDir(outputPath)

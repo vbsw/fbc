@@ -25,7 +25,7 @@ func main() {
 			args.printInfo()
 
 		} else {
-			fileProc := newFileProcessor(args.command.Keys()[0])
+			fileProc := newFileProcessor(args.command.Values[0])
 			iterate(args, fileProc)
 		}
 	} else {
@@ -52,7 +52,7 @@ func iterate(args *arguments, fileProc fileProcessor) error {
 }
 
 func iterateRecursive(args *arguments, fileProc fileProcessor) error {
-	inputDir := args.input.Values()[0]
+	inputDir := args.input.Values[0]
 	byOr := args.or.Available()
 	silent := args.silent.Available()
 	filterParts := splitStringByStar(args.inputFilter)
@@ -89,7 +89,7 @@ func iterateRecursive(args *arguments, fileProc fileProcessor) error {
 }
 
 func iterateFlat(args *arguments, fileProc fileProcessor) error {
-	inputDir := args.input.Values()[0]
+	inputDir := args.input.Values[0]
 	byOr := args.or.Available()
 	silent := args.silent.Available()
 	filterParts := splitStringByStar(args.inputFilter)
