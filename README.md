@@ -33,7 +33,6 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 		-s, --silent      don't output errors to screen when reading files
 
 ## Examples
-
 Copy any file containing the words "alice" and "bob"
 
 	$ fbc cp ./ ../bak alice bob
