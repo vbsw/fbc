@@ -183,6 +183,7 @@ func parseInputFilter(params *parameters) {
 			separator = filepath.Separator
 		}
 		fileNameBegin := rindex(input, separator) + 1
+
 		fileName := input[fileNameBegin:]
 		wildCardUsed := rindex(fileName, '*') >= 0
 
@@ -230,10 +231,10 @@ func validateParameters(params *parameters) error {
 		err = errors.New("wrong argument usage")
 
 	} else if !anyAvailable(paramsInfo) && anyAvailable(paramsCmd) {
-		if !params.command.Available() {
-			err = errors.New("command missing")
-		} else {
+		if params.command.Available() {
 			err = validateIODirectories(params)
+		} else {
+			err = errors.New("command missing")
 		}
 	}
 	return err
@@ -247,20 +248,22 @@ func validateIODirectories(params *parameters) error {
 		err = errors.New("output directory is not specified")
 	} else {
 		err = validateDirectory(params.input.Values[0], "input")
-		if err == nil && params.output.Available() {
-			err = validateDirectory(params.output.Values[0], "output")
+		if err == nil {
+			var input string
+			input, err = filepath.Abs(params.input.Values[0])
 			if err == nil {
-				var input string
-				input, err = filepath.Abs(params.input.Values[0])
-				if err == nil {
-					var output string
-					output, err = filepath.Abs(params.output.Values[0])
+				params.input.Values[0] = input
+				if params.output.Available() {
+					err = validateDirectory(params.output.Values[0], "output")
 					if err == nil {
-						if input != output {
-							params.input.Values[0] = input
-							params.output.Values[0] = output
-						} else {
-							err = errors.New("input and output directories are the same")
+						var output string
+						output, err = filepath.Abs(params.output.Values[0])
+						if err == nil {
+							if input != output {
+								params.output.Values[0] = output
+							} else {
+								err = errors.New("input and output directories are the same")
+							}
 						}
 					}
 				}
