@@ -17,16 +17,15 @@ import (
 )
 
 func main() {
-	args := new(arguments)
-	err := args.parseCommandLine(os.Args[1:])
+	params, err := parseOSArgs()
 
 	if err == nil {
-		if args.infoAvailable() {
-			args.printInfo()
+		if params.infoAvailable() {
+			params.printInfo()
 
 		} else {
-			fileProc := newFileProcessor(args.command.Values[0])
-			iterate(args, fileProc)
+			fileProc := newFileProcessor(params.command.Values[0])
+			iterate(params, fileProc)
 		}
 	} else {
 		fmt.Println(messageError(err))
@@ -36,27 +35,27 @@ func main() {
 // iterate iterates over files calling fileProc.processFile for each file
 // matching the criteria. If fileProc.processFile returns error != nil,
 // then processing is stopped.
-func iterate(args *arguments, fileProc fileProcessor) error {
+func iterate(params *parameters, fileProc fileProcessor) error {
 	var err error
 
 	if fileProc == nil {
 		fileProc = new(fileProcessorDefault)
 	}
-	if args.recursive.Available() {
-		err = iterateRecursive(args, fileProc)
+	if params.recursive.Available() {
+		err = iterateRecursive(params, fileProc)
 
 	} else {
-		err = iterateFlat(args, fileProc)
+		err = iterateFlat(params, fileProc)
 	}
 	return err
 }
 
-func iterateRecursive(args *arguments, fileProc fileProcessor) error {
-	inputDir := args.input.Values[0]
-	byOr := args.or.Available()
-	silent := args.silent.Available()
-	filterParts := splitStringByStar(args.inputFilter)
-	buffer := checkfile.NewTermsBuffer(1024*1024*4, args.contentFilter)
+func iterateRecursive(params *parameters, fileProc fileProcessor) error {
+	inputDir := params.input.Values[0]
+	byOr := params.or.Available()
+	silent := params.silent.Available()
+	filterParts := splitStringByStar(params.inputFilter)
+	buffer := checkfile.NewTermsBuffer(1024*1024*4, params.contentFilter)
 	count := 0
 	err := filepath.Walk(inputDir, func(path string, fileInfo os.FileInfo, err error) error {
 		if err == nil {
@@ -66,7 +65,7 @@ func iterateRecursive(args *arguments, fileProc fileProcessor) error {
 				match, err = isFileMatch(byOr, path, fileInfo, filterParts, buffer)
 
 				if match && err == nil {
-					err = fileProc.processFile(args, path, fileInfo)
+					err = fileProc.processFile(params, path, fileInfo)
 
 					if err == nil {
 						count++
@@ -88,12 +87,12 @@ func iterateRecursive(args *arguments, fileProc fileProcessor) error {
 	return err
 }
 
-func iterateFlat(args *arguments, fileProc fileProcessor) error {
-	inputDir := args.input.Values[0]
-	byOr := args.or.Available()
-	silent := args.silent.Available()
-	filterParts := splitStringByStar(args.inputFilter)
-	buffer := checkfile.NewTermsBuffer(1024*1024*4, args.contentFilter)
+func iterateFlat(params *parameters, fileProc fileProcessor) error {
+	inputDir := params.input.Values[0]
+	byOr := params.or.Available()
+	silent := params.silent.Available()
+	filterParts := splitStringByStar(params.inputFilter)
+	buffer := checkfile.NewTermsBuffer(1024*1024*4, params.contentFilter)
 	count := 0
 	err := filepath.Walk(inputDir, func(path string, fileInfo os.FileInfo, err error) error {
 		if err == nil {
@@ -103,7 +102,7 @@ func iterateFlat(args *arguments, fileProc fileProcessor) error {
 				match, err = isFileMatch(byOr, path, fileInfo, filterParts, buffer)
 
 				if match && err == nil {
-					err = fileProc.processFile(args, path, fileInfo)
+					err = fileProc.processFile(params, path, fileInfo)
 
 					if err == nil {
 						count++

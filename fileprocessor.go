@@ -20,7 +20,7 @@ import (
 type fileProcessor interface {
 	// processFile is called for every file matching the criteria.
 	// If returned value != nil, iteration is stopped.
-	processFile(*arguments, string, os.FileInfo) error
+	processFile(*parameters, string, os.FileInfo) error
 
 	// summary is called after all files have been processed or
 	// an error occurred. count is the number of files processed.
@@ -70,7 +70,7 @@ func newFileProcessor(command string) fileProcessor {
 	return processor
 }
 
-func (fileProc *fileProcessorDefault) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorDefault) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
 	fmt.Println(path)
 	return nil
 }
@@ -83,7 +83,7 @@ func (fileProc *fileProcessorDefault) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorCount) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCount) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (fileProc *fileProcessorCount) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorCP) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCP) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
 	var err error
 	var inputFile *os.File
 	inputFile, err = os.Open(path)
@@ -103,8 +103,8 @@ func (fileProc *fileProcessorCP) processFile(args *arguments, path string, fileI
 	if err == nil {
 		var outputFile *os.File
 		defer inputFile.Close()
-		inputDir := args.input.Values[0]
-		outputDir := args.output.Values[0]
+		inputDir := params.input.Values[0]
+		outputDir := params.output.Values[0]
 		subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
 		outputPath := filepath.Join(outputDir, subDir)
 		err = fileProc.ensureDir(outputPath)
@@ -147,10 +147,10 @@ func (fileProc *fileProcessorCP) ensureDir(dir string) error {
 	return err
 }
 
-func (fileProc *fileProcessorMV) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorMV) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
 	var err error
-	inputDir := args.input.Values[0]
-	outputDir := args.output.Values[0]
+	inputDir := params.input.Values[0]
+	outputDir := params.output.Values[0]
 	subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
 	outputPath := filepath.Join(outputDir, subDir)
 	err = fileProc.ensureDir(outputPath)
@@ -167,7 +167,7 @@ func (fileProc *fileProcessorMV) processFile(args *arguments, path string, fileI
 	return err
 }
 
-func (fileProc *fileProcessorPrint) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorPrint) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
 	fmt.Println(fileInfo.Name())
 	return nil
 }
@@ -178,7 +178,7 @@ func (fileProc *fileProcessorPrint) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorRM) processFile(args *arguments, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorRM) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
 	err := os.Remove(path)
 	return err
 }
