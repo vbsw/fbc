@@ -6,7 +6,7 @@
 fbc (file by content) allows various commands on files filtered by their content. fbc is published on <https://github.com/vbsw/fbc> and <https://gitlab.com/vbsw/fbc>.
 
 ## Copyright
-Copyright 2020, 2021, Vitali Baumtrok (vbsw@mailbox.org).
+Copyright 2020 - 2022, Vitali Baumtrok (vbsw@mailbox.org).
 
 fbc is distributed under the Boost Software License, version 1.0. (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 

@@ -1,5 +1,5 @@
 /*
- *          Copyright 2020, Vitali Baumtrok.
+ *      Copyright 2021, 2022 Vitali Baumtrok.
  * Distributed under the Boost Software License, Version 1.0.
  *     (See accompanying file LICENSE or copy at
  *        http://www.boost.org/LICENSE_1_0.txt)
@@ -10,7 +10,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/vbsw/checkfile"
+	"github.com/vbsw/golib/check"
 	"io"
 	"os"
 	"path/filepath"
@@ -70,7 +70,7 @@ func newFileProcessor(command string) fileProcessor {
 	return processor
 }
 
-func (fileProc *fileProcessorDefault) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorDefault) processFile(params *parameters, path string, info os.FileInfo) error {
 	fmt.Println(path)
 	return nil
 }
@@ -83,7 +83,7 @@ func (fileProc *fileProcessorDefault) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorCount) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCount) processFile(params *parameters, path string, info os.FileInfo) error {
 	return nil
 }
 
@@ -95,32 +95,28 @@ func (fileProc *fileProcessorCount) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorCP) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorCP) processFile(params *parameters, path string, info os.FileInfo) error {
 	var err error
 	var inputFile *os.File
 	inputFile, err = os.Open(path)
-
 	if err == nil {
 		var outputFile *os.File
 		defer inputFile.Close()
 		inputDir := params.input.Values[0]
 		outputDir := params.output.Values[0]
-		subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
+		subDir := path[len(inputDir) : len(path)-len(info.Name())]
 		outputPath := filepath.Join(outputDir, subDir)
 		err = fileProc.ensureDir(outputPath)
-
 		if err == nil {
-			outputPath = filepath.Join(outputPath, fileInfo.Name())
-
-			if !checkfile.Exists(outputPath) {
+			outputPath = filepath.Join(outputPath, info.Name())
+			if !check.FileExists(outputPath) {
 				outputFile, err = os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-
 				if err == nil {
 					defer outputFile.Close()
 					_, err = io.Copy(outputFile, inputFile)
 				}
 			} else {
-				err = errors.New("target file or directory already exists: " + fileInfo.Name())
+				err = errors.New("target file already exists: " + info.Name())
 			}
 		}
 	}
@@ -128,47 +124,47 @@ func (fileProc *fileProcessorCP) processFile(params *parameters, path string, fi
 }
 
 func (fileProc *fileProcessorCP) ensureDir(dir string) error {
-	var err error
-	exists := false
-
 	for _, existingDir := range fileProc.existingDirs {
 		if existingDir == dir {
-			exists = true
-			break
+			return nil
 		}
 	}
-	if !exists {
-		fileProc.existingDirs = append(fileProc.existingDirs, dir)
-
-		if !checkfile.Exists(dir) {
-			err = os.MkdirAll(dir, 0666)
+	info, err := os.Stat(dir)
+	if err != nil && os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0666)
+		if err == nil {
+			fileProc.existingDirs = append(fileProc.existingDirs, dir)
+		}
+	} else if info != nil && err == nil {
+		if info.IsDir() {
+			fileProc.existingDirs = append(fileProc.existingDirs, dir)
+		} else {
+			err = errors.New("can't create directory (already exists as file): " + info.Name())
 		}
 	}
 	return err
 }
 
-func (fileProc *fileProcessorMV) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorMV) processFile(params *parameters, path string, info os.FileInfo) error {
 	var err error
 	inputDir := params.input.Values[0]
 	outputDir := params.output.Values[0]
-	subDir := path[len(inputDir) : len(path)-len(fileInfo.Name())]
+	subDir := path[len(inputDir) : len(path)-len(info.Name())]
 	outputPath := filepath.Join(outputDir, subDir)
 	err = fileProc.ensureDir(outputPath)
-
 	if err == nil {
-		outputPath = filepath.Join(outputPath, fileInfo.Name())
-
-		if !checkfile.Exists(outputPath) {
+		outputPath = filepath.Join(outputPath, info.Name())
+		if !check.FileExists(outputPath) {
 			err = os.Rename(path, outputPath)
 		} else {
-			err = errors.New("target file or directory already exists: " + fileInfo.Name())
+			err = errors.New("target file already exists: " + info.Name())
 		}
 	}
 	return err
 }
 
-func (fileProc *fileProcessorPrint) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
-	fmt.Println(fileInfo.Name())
+func (fileProc *fileProcessorPrint) processFile(params *parameters, path string, info os.FileInfo) error {
+	fmt.Println(info.Name())
 	return nil
 }
 
@@ -178,7 +174,7 @@ func (fileProc *fileProcessorPrint) summary(count int, err error) {
 	}
 }
 
-func (fileProc *fileProcessorRM) processFile(params *parameters, path string, fileInfo os.FileInfo) error {
+func (fileProc *fileProcessorRM) processFile(params *parameters, path string, info os.FileInfo) error {
 	err := os.Remove(path)
 	return err
 }

@@ -10,7 +10,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/vbsw/osargs"
+	"github.com/vbsw/golib/osargs"
 	"os"
 	"path/filepath"
 	"unsafe"
@@ -40,15 +40,15 @@ type parameters struct {
 	inputFilter   string
 }
 
-func parseOSArgs() (*parameters, error) {
+func (params *parameters) initFromOSArgs() error {
 	args := osargs.New()
-	return parseOSArgsFrom(args)
+	err := params.initFromArgs(args)
+	return err
 }
 
-// parseOSArgsFrom is for test purposes.
-func parseOSArgsFrom(args *osargs.Arguments) (*parameters, error) {
+// initFromArgs is for test purposes.
+func (params *parameters) initFromArgs(args *osargs.Arguments) error {
 	var err error
-	params := new(parameters)
 	if len(args.Values) > 0 {
 		params.help = args.Parse("-h", "--help", "-help", "help")
 		params.version = args.Parse("-v", "--version", "-version", "version")
@@ -70,7 +70,7 @@ func parseOSArgsFrom(args *osargs.Arguments) (*parameters, error) {
 
 		err = validateParameters(params)
 	}
-	return params, err
+	return err
 }
 
 func (params *parameters) infoParameters() []*osargs.Result {
@@ -275,10 +275,10 @@ func validateIODirectories(params *parameters) error {
 
 func validateDirectory(path, dirTypeName string) error {
 	var err error
-	fileInfo, statErr := os.Stat(path)
-	if statErr == nil || !os.IsNotExist(statErr) {
-		if fileInfo != nil {
-			if !fileInfo.IsDir() {
+	info, errInfo := os.Stat(path)
+	if errInfo == nil || !os.IsNotExist(errInfo) {
+		if info != nil {
+			if !info.IsDir() {
 				err = errors.New(dirTypeName + " path is a file, but must be a directory")
 			}
 		} else {

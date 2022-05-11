@@ -35,19 +35,19 @@ func messageHelp() string {
 }
 
 func messageVersion() string {
-	return "1.1.0"
+	return "1.1.1"
 }
 
 func messageExample() string {
 	message := "\nEXAMPLES\n"
 	message += "   fbc cp ./ ../bak bob alice\n"
-	message += "   fbc mv ./*.txt ../bak bob alice\n"
-	message += "   fbc rm ./*.txt bob alice"
+	message += "   fbc mv \"./*.txt\" ../bak bob alice\n"
+	message += "   fbc rm \"./*.txt\" bob alice"
 	return message
 }
 
 func messageCopyright() string {
-	message := "Copyright 2020, Vitali Baumtrok (vbsw@mailbox.org).\n"
+	message := "Copyright 2020 - 2022, Vitali Baumtrok (vbsw@mailbox.org).\n"
 	message += "Distributed under the Boost Software License, Version 1.0."
 	return message
 }

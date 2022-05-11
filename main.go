@@ -9,15 +9,16 @@
 package main
 
 import (
+	pkgbytes "bytes"
 	"fmt"
-	"github.com/vbsw/checkfile"
+	"github.com/vbsw/golib/check"
 	"os"
 	"path/filepath"
-	"unsafe"
 )
 
 func main() {
-	params, err := parseOSArgs()
+	var params parameters
+	err := params.initFromOSArgs()
 
 	if err == nil {
 		if params.infoAvailable() {
@@ -25,7 +26,7 @@ func main() {
 
 		} else {
 			fileProc := newFileProcessor(params.command.Values[0])
-			iterate(params, fileProc)
+			iterate(&params, fileProc)
 		}
 	} else {
 		fmt.Println(messageError(err))
@@ -37,13 +38,11 @@ func main() {
 // then processing is stopped.
 func iterate(params *parameters, fileProc fileProcessor) error {
 	var err error
-
 	if fileProc == nil {
 		fileProc = new(fileProcessorDefault)
 	}
 	if params.recursive.Available() {
 		err = iterateRecursive(params, fileProc)
-
 	} else {
 		err = iterateFlat(params, fileProc)
 	}
@@ -54,19 +53,18 @@ func iterateRecursive(params *parameters, fileProc fileProcessor) error {
 	inputDir := params.input.Values[0]
 	byOr := params.or.Available()
 	silent := params.silent.Available()
-	filterParts := splitStringByStar(params.inputFilter)
-	buffer := checkfile.NewTermsBuffer(1024*1024*4, params.contentFilter)
+	fileNameFilter := splitStringByStar(params.inputFilter)
+	buffer := make([]byte, 1024*1024*4)
 	count := 0
-	err := filepath.Walk(inputDir, func(path string, fileInfo os.FileInfo, err error) error {
-		if err == nil {
+	terms := toBytes(params.contentFilter)
+	err := filepath.Walk(inputDir, func(path string, info os.FileInfo, err error) error {
+		if err == nil && info != nil && !info.IsDir() {
 			// avoid input directory as input file
 			if len(path) > len(inputDir) {
-				var match bool
-				match, err = isFileMatch(byOr, path, fileInfo, filterParts, buffer)
-
-				if match && err == nil {
-					err = fileProc.processFile(params, path, fileInfo)
-
+				var hasTerms bool
+				hasTerms, err = fileHasTerms(byOr, path, info.Name(), buffer, fileNameFilter, terms)
+				if hasTerms && err == nil {
+					err = fileProc.processFile(params, path, info)
 					if err == nil {
 						count++
 					}
@@ -75,7 +73,7 @@ func iterateRecursive(params *parameters, fileProc fileProcessor) error {
 		}
 		// ignore errors
 		if err != nil {
-			if !silent {
+			if !silent && !os.IsNotExist(err) {
 				fmt.Println(messageWarning(err))
 			}
 			err = nil
@@ -83,7 +81,6 @@ func iterateRecursive(params *parameters, fileProc fileProcessor) error {
 		return err
 	})
 	fileProc.summary(count, err)
-
 	return err
 }
 
@@ -91,19 +88,18 @@ func iterateFlat(params *parameters, fileProc fileProcessor) error {
 	inputDir := params.input.Values[0]
 	byOr := params.or.Available()
 	silent := params.silent.Available()
-	filterParts := splitStringByStar(params.inputFilter)
-	buffer := checkfile.NewTermsBuffer(1024*1024*4, params.contentFilter)
+	fileNameFilter := splitStringByStar(params.inputFilter)
+	buffer := make([]byte, 1024*1024*4)
 	count := 0
-	err := filepath.Walk(inputDir, func(path string, fileInfo os.FileInfo, err error) error {
-		if err == nil {
+	terms := toBytes(params.contentFilter)
+	err := filepath.Walk(inputDir, func(path string, info os.FileInfo, err error) error {
+		if err == nil && info != nil && !info.IsDir() {
 			// avoid input directory as input file; parent must be input directory
 			if len(path) > len(inputDir) && len(filepath.Dir(path)) == len(inputDir) {
-				var match bool
-				match, err = isFileMatch(byOr, path, fileInfo, filterParts, buffer)
-
-				if match && err == nil {
-					err = fileProc.processFile(params, path, fileInfo)
-
+				var hasTerms bool
+				hasTerms, err = fileHasTerms(byOr, path, info.Name(), buffer, fileNameFilter, terms)
+				if hasTerms && err == nil {
+					err = fileProc.processFile(params, path, info)
 					if err == nil {
 						count++
 					}
@@ -112,7 +108,7 @@ func iterateFlat(params *parameters, fileProc fileProcessor) error {
 		}
 		// ignore errors
 		if err != nil {
-			if !silent {
+			if !silent && !os.IsNotExist(err) {
 				fmt.Println(messageWarning(err))
 			}
 			err = nil
@@ -124,77 +120,52 @@ func iterateFlat(params *parameters, fileProc fileProcessor) error {
 	return err
 }
 
-func isFileMatch(byOr bool, path string, fileInfo os.FileInfo, filterParts [][]byte, buffer *checkfile.TermsBuffer) (bool, error) {
-	var match bool
-	var err error
-
-	if !fileInfo.IsDir() && isNameMatch(fileInfo.Name(), filterParts) {
-		if byOr {
-			match, err = checkfile.ContainsAny(path, buffer)
-		} else {
-			match, err = checkfile.ContainsAll(path, buffer)
+func fileHasTerms(byOr bool, path, fileName string, buffer []byte, fileNameFilter, terms [][]byte) (bool, error) {
+	if isFilterMatch(fileName, fileNameFilter) {
+		if len(terms) > 0 {
+			if byOr {
+				return check.FileHasAny(path, buffer, terms)
+			}
+			return check.FileHasAll(path, buffer, terms)
 		}
+		return true, nil
 	}
-	return match, err
+	return false, nil
 }
 
-func isNameMatch(fileName string, filterParts [][]byte) bool {
-	// avoid copying
-	name := *(*[]byte)(unsafe.Pointer(&fileName))
-	if len(filterParts) > 0 {
-		if hasPrefix(name, filterParts[0]) {
-			offset := len(filterParts[0])
-
-			for _, filterPart := range filterParts[1:] {
-				offsetNew := matchEndIndex(name, filterPart, offset)
-
-				if offset != offsetNew {
-					offset = offsetNew
+func isFilterMatch(str string, filter [][]byte) bool {
+	bytes := []byte(str)
+	if len(filter) > 0 {
+		if pkgbytes.HasPrefix(bytes, filter[0]) {
+			offset := len(filter[0])
+			for _, part := range filter[1:] {
+				if len(part) > 0 {
+					offsetPrev, limit := offset, len(bytes)-len(part)+1
+					for i := offset; i < limit; i++ {
+						if pkgbytes.HasPrefix(bytes[i:], part) {
+							offset = i + len(part)
+							break
+						}
+					}
+					if offset == offsetPrev {
+						return false
+					}
 				} else {
-					return false
+					// last part can be empty; this matches rest of string
+					return true
 				}
 			}
-			if offset == len(name) {
-				return true
-			}
-			return false
+			return offset == len(bytes)
 		}
 		return false
 	}
 	return true
 }
 
-func hasPrefix(bytes, prefix []byte) bool {
-	if len(bytes) >= len(prefix) {
-		for i, b := range prefix {
-			if bytes[i] != b {
-				return false
-			}
-		}
-		return true
+func toBytes(contentFilter []string) [][]byte {
+	terms := make([][]byte, len(contentFilter))
+	for i, term := range contentFilter {
+		terms[i] = []byte(term)
 	}
-	return false
-}
-
-func matchEndIndex(bytes, part []byte, offset int) int {
-	if len(part) > 0 {
-		for i := offset; i < len(bytes)-len(part)+1; i++ {
-			match := true
-
-			for j, b := range part {
-				if bytes[i+j] != b {
-					match = false
-					break
-				}
-			}
-			if match {
-				offset = i + len(part)
-				break
-			}
-		}
-		// only last part is empty
-	} else {
-		offset = len(bytes)
-	}
-	return offset
+	return terms
 }
