@@ -18,7 +18,7 @@ func TestParseOSArgsA(t *testing.T) {
 	args := new(osargs.Arguments)
 	args.Values = []string{}
 	args.Parsed = make([]bool, len(args.Values))
-	params := new(parameters)
+	params := new(tParameters)
 	err := params.initFromArgs(args)
 	if err != nil {
 		t.Error(err.Error())
@@ -26,7 +26,7 @@ func TestParseOSArgsA(t *testing.T) {
 
 	args.Values = []string{"--help", "--version"}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err == nil {
 		t.Error("incompatible parameters not recognized")
@@ -34,7 +34,7 @@ func TestParseOSArgsA(t *testing.T) {
 
 	args.Values = []string{"--help", "cp"}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err == nil {
 		t.Error("incompatible parameters not recognized")
@@ -42,7 +42,7 @@ func TestParseOSArgsA(t *testing.T) {
 
 	args.Values = []string{"asdf", "qwer"}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err == nil {
 		t.Error("missing command not recognized")
@@ -53,7 +53,7 @@ func TestParseOSArgsB(t *testing.T) {
 	args := new(osargs.Arguments)
 	args.Values = []string{"count"}
 	args.Parsed = make([]bool, len(args.Values))
-	params := new(parameters)
+	params := new(tParameters)
 	err := params.initFromArgs(args)
 	if err == nil {
 		t.Error("unspecified input directory not recognized")
@@ -61,7 +61,7 @@ func TestParseOSArgsB(t *testing.T) {
 
 	args.Values = []string{"cp", "./"}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err == nil {
 		t.Error("unspecified output directory not recognized")
@@ -69,7 +69,7 @@ func TestParseOSArgsB(t *testing.T) {
 
 	args.Values = []string{"count", "a directory that hopefully does not exist"}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err == nil {
 		t.Error("unexistent input directory not recognized")
@@ -77,7 +77,7 @@ func TestParseOSArgsB(t *testing.T) {
 
 	args.Values = []string{"cp", "./", "a directory that hopefully does not exist"}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err == nil {
 		t.Error("unexistent output directory not recognized")
@@ -85,7 +85,7 @@ func TestParseOSArgsB(t *testing.T) {
 
 	args.Values = []string{"cp", "./", "./."}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err == nil {
 		t.Error("equal input and output directory not recognized")
@@ -96,12 +96,12 @@ func TestParseOSArgsC(t *testing.T) {
 	args := new(osargs.Arguments)
 	args.Values = []string{"count", "."}
 	args.Parsed = make([]bool, len(args.Values))
-	params := new(parameters)
+	params := new(tParameters)
 	err := params.initFromArgs(args)
 	if err != nil {
 		t.Error(err.Error())
-	} else if params.inputFilter != "*" {
-		t.Error(params.inputFilter)
+	} else if params.fileNameFilter != "*" {
+		t.Error(params.fileNameFilter)
 	} else {
 		wd, err := os.Getwd()
 		if err == nil {
@@ -116,11 +116,11 @@ func TestParseOSArgsC(t *testing.T) {
 
 	args.Values = []string{"count", "./*.txt"}
 	args.Parsed = make([]bool, len(args.Values))
-	params = new(parameters)
+	params = new(tParameters)
 	err = params.initFromArgs(args)
 	if err != nil {
 		t.Error(err.Error())
-	} else if params.inputFilter != "*.txt" {
-		t.Error(params.inputFilter)
+	} else if params.fileNameFilter != "*.txt" {
+		t.Error(params.fileNameFilter)
 	}
 }

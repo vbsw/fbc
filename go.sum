@@ -1,4 +1,6 @@
 github.com/vbsw/golib/check v1.0.0 h1:Plo/y3VyCb/jBvVQ5/4rBVFNXRLtjay9iiXJGaADgLc=
 github.com/vbsw/golib/check v1.0.0/go.mod h1:Yu5hon870l9pCdag99NkmxyS9vWTJQWQweqyopX4KaA=
+github.com/vbsw/golib/iter v1.0.0 h1:LqcWI6ElDjJnlLJ1VWn20JCPrj9vRCnFZUwADzcfr2w=
+github.com/vbsw/golib/iter v1.0.0/go.mod h1:qvCWkHci1yMObD6ZoXl/MQs6FABqdAFPaiONrGb0sWo=
 github.com/vbsw/golib/osargs v1.0.0 h1:cTp5ErrdDymRopZTsEG1AZ6wt6jPjL5VgLwobIhC/HI=
 github.com/vbsw/golib/osargs v1.0.0/go.mod h1:srWWEFAGR8t5Z+1kjPxBDim6xgTEHCTnGFS8M0C6mi8=
