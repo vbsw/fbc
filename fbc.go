@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -53,7 +54,7 @@ type tFileProcessorDefault struct {
 	silent         bool
 	or             bool
 	contentFilter  [][]byte
-	fileNameFilter [][]byte
+	fileNameFilter []string
 	buffer         []byte
 }
 
@@ -355,7 +356,7 @@ func (proc *tFileProcessorDefault) init(params *tParameters) {
 	proc.silent = params.silent.Available()
 	proc.or = params.or.Available()
 	proc.contentFilter = toBytes(params.contentFilter)
-	proc.fileNameFilter = splitStringByStar(params.fileNameFilter)
+	proc.fileNameFilter = strings.Split(params.fileNameFilter, "*")
 	proc.buffer = make([]byte, 1024*1024*4)
 }
 
@@ -389,13 +390,13 @@ func (proc *tFileProcessorDefault) printSummary(err error) {
 
 func (proc *tFileProcessorDefault) isFileNameMatch(name string) bool {
 	if len(proc.fileNameFilter) > 0 {
-		if hasPrefix(name, proc.fileNameFilter[0], 0) {
+		if strings.HasPrefix(name, proc.fileNameFilter[0]) {
 			offset := len(proc.fileNameFilter[0])
 			for _, part := range proc.fileNameFilter[1:] {
 				if len(part) > 0 {
 					offsetPrev, limit := offset, len(name)-len(part)+1
 					for i := offset; i < limit; i++ {
-						if hasPrefix(name, part, i) {
+						if strings.HasPrefix(name[i:], part) {
 							offset = i + len(part)
 							break
 						}
@@ -545,7 +546,7 @@ func (proc *tFileProcessorRM) ProcessFile(path string, info os.FileInfo, err err
 
 func hasPrefix(str string, prefix []byte, offset int) bool {
 	if len(str) >= len(prefix) {
-		for i := 0; i + offset <= len(str); i++ {
+		for i := 0; i+offset <= len(str); i++ {
 			if i < len(prefix) {
 				if str[i+offset] != prefix[i] {
 					return false
@@ -590,61 +591,6 @@ func toBytes(strings []string) [][]byte {
 		terms[i] = []byte(term)
 	}
 	return terms
-}
-
-func splitStringByStar(str string) [][]byte {
-	parts := make([][]byte, 0, 2)
-	bytes := trim([]byte(str))
-	if len(bytes) > 0 {
-		contentBegin := 0
-		for contentBegin < len(bytes) {
-			// this is correkt: starBegin 0, then part ""
-			starBegin := seekStar(bytes, contentBegin)
-			part := bytes[contentBegin:starBegin]
-			contentBegin = seekContent(bytes, starBegin)
-			parts = append(parts, part)
-		}
-	}
-	return parts
-}
-
-func trim(bytes []byte) []byte {
-	begin := 0
-	end := 0
-	for i, b := range bytes {
-		if b > 32 {
-			begin = i
-			break
-		}
-	}
-	for i := len(bytes) - 1; i > 0; i-- {
-		b := bytes[i]
-		if b > 32 {
-			end = i + 1
-			break
-		}
-	}
-	return bytes[begin:end]
-}
-
-func seekStar(bytes []byte, offset int) int {
-	for offset < len(bytes) {
-		if bytes[offset] == '*' {
-			break
-		}
-		offset++
-	}
-	return offset
-}
-
-func seekContent(bytes []byte, offset int) int {
-	for offset < len(bytes) {
-		if bytes[offset] != '*' {
-			break
-		}
-		offset++
-	}
-	return offset
 }
 
 func printInfo(params *tParameters) {
@@ -692,14 +638,6 @@ func printVersion() {
 	fmt.Println("1.1.1")
 }
 
-func printExample() {
-	message := "\nEXAMPLES\n"
-	message += "   fbc cp ./ ../bak bob alice\n"
-	message += "   fbc mv \"./*.txt\" ../bak bob alice\n"
-	message += "   fbc rm \"./*.txt\" bob alice"
-	fmt.Println(message)
-}
-
 func printCopyright() {
 	message := "Copyright 2020 - 2022, Vitali Baumtrok (vbsw@mailbox.org).\n"
 	message += "Distributed under the Boost Software License, Version 1.0."
@@ -730,4 +668,12 @@ func printError(err error) {
 
 func printWarning(err error) {
 	fmt.Println("warning: " + err.Error())
+}
+
+func printExample() {
+	message := "\nEXAMPLES\n"
+	message += "   fbc cp ./ ../bak bob alice\n"
+	message += "   fbc mv \"./*.txt\" ../bak bob alice\n"
+	message += "   fbc rm \"./*.txt\" bob alice"
+	fmt.Println(message)
 }
