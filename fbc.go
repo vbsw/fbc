@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 const (
@@ -36,6 +37,7 @@ type tParameters struct {
 	copyright      *osargs.Result
 	or             *osargs.Result
 	silent         *osargs.Result
+	threads        *osargs.Result
 	command        *osargs.Result
 	recursive      *osargs.Result
 	input          *osargs.Result
@@ -53,9 +55,11 @@ type tFileProcessorDefault struct {
 	count          int
 	silent         bool
 	or             bool
+	threads        bool
 	contentFilter  [][]byte
 	fileNameFilter []string
 	buffer         []byte
+	mutex          sync.Mutex
 }
 
 type tFileProcessorCount struct {
@@ -90,9 +94,17 @@ func main() {
 		} else {
 			proc := newFileProcessor(&params)
 			if params.recursive.Available() {
-				err = iter.IterateFilesRecr(params.inputDir(), proc)
+				if params.threads.Available() {
+					err = iter.IterateFilesRecrGo(params.inputDir(), proc)
+				} else {
+					err = iter.IterateFilesRecr(params.inputDir(), proc)
+				}
 			} else {
-				err = iter.IterateFilesFlat(params.inputDir(), proc)
+				if params.threads.Available() {
+					err = iter.IterateFilesFlatGo(params.inputDir(), proc)
+				} else {
+					err = iter.IterateFilesFlat(params.inputDir(), proc)
+				}
 			}
 			proc.printSummary(err)
 		}
@@ -128,6 +140,7 @@ func (params *tParameters) initFromArgs(args *osargs.Arguments) error {
 		params.copyright = args.Parse("-c", "--copyright", "-copyright", "copyright")
 		params.or = args.Parse("-o", "--or", "-or", "or")
 		params.silent = args.Parse("-s", "--silent", "-silent", "silent")
+		params.threads = args.Parse("-t", "--threads", "-threads", "threads")
 		params.command = args.Parse(argCOUNT, argCP, argMV, argPRINT, argRM)
 		params.recursive = args.Parse("-r", "--recursive", "-recursive", "recursive")
 		params.input = new(osargs.Result)
@@ -221,12 +234,13 @@ func (params *tParameters) infoParameters() []*osargs.Result {
 }
 
 func (params *tParameters) commandParameters() []*osargs.Result {
-	paramsCmd := make([]*osargs.Result, 5)
+	paramsCmd := make([]*osargs.Result, 6)
 	paramsCmd[0] = params.command
 	paramsCmd[1] = params.input
 	paramsCmd[2] = params.or
 	paramsCmd[3] = params.output
 	paramsCmd[4] = params.recursive
+	paramsCmd[5] = params.threads
 	return paramsCmd
 }
 
@@ -355,6 +369,7 @@ func newFileProcessor(params *tParameters) tFileProcessor {
 func (proc *tFileProcessorDefault) init(params *tParameters) {
 	proc.silent = params.silent.Available()
 	proc.or = params.or.Available()
+	proc.threads = params.threads.Available()
 	proc.contentFilter = toBytes(params.contentFilter)
 	proc.fileNameFilter = strings.Split(params.fileNameFilter, "*")
 	proc.buffer = make([]byte, 1024*1024*4)
@@ -371,7 +386,13 @@ func (proc *tFileProcessorDefault) ProcessFile(path string, info os.FileInfo, er
 func (proc *tFileProcessorDefault) postProcess(match bool, err error) error {
 	if err == nil {
 		if match {
-			proc.count++
+			if proc.threads {
+				proc.mutex.Lock()
+				proc.count++
+				proc.mutex.Unlock()
+			} else {
+				proc.count++
+			}
 		}
 	} else if !proc.silent && !os.IsNotExist(err) {
 		printWarning(err)
@@ -446,25 +467,25 @@ func (proc *tFileProcessorCP) ProcessFile(path string, info os.FileInfo, err err
 	if err == nil && proc.isFileNameMatch(info.Name()) {
 		match, err = proc.isContentMatch(path)
 		if err == nil && match {
-			var inputFile *os.File
-			inputFile, err = os.Open(path)
+			subDir := path[proc.inputDirLength : len(path)-len(info.Name())]
+			outputPath := filepath.Join(proc.outputDir, subDir)
+			err = proc.ensureDir(outputPath, subDir)
 			if err == nil {
-				var outputFile *os.File
-				defer inputFile.Close()
-				subDir := path[proc.inputDirLength : len(path)-len(info.Name())]
-				outputPath := filepath.Join(proc.outputDir, subDir)
-				err = proc.ensureDir(outputPath, subDir)
-				if err == nil {
-					outputPath = filepath.Join(outputPath, info.Name())
-					if !check.FileExists(outputPath) {
+				outputPath = filepath.Join(outputPath, info.Name())
+				if !check.FileExists(outputPath) {
+					var inputFile *os.File
+					inputFile, err = os.Open(path)
+					if err == nil {
+						var outputFile *os.File
+						defer inputFile.Close()
 						outputFile, err = os.OpenFile(outputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 						if err == nil {
 							defer outputFile.Close()
 							_, err = io.Copy(outputFile, inputFile)
 						}
-					} else {
-						err = errors.New("target file already exists: " + filepath.Join(subDir, info.Name()))
 					}
+				} else {
+					err = errors.New("target file already exists: " + filepath.Join(subDir, info.Name()))
 				}
 			}
 		}
@@ -478,9 +499,27 @@ func (proc *tFileProcessorCP) ensureDir(dir, subDir string) error {
 			return nil
 		}
 	}
+	if proc.threads {
+		return proc.ensureDirThr(dir, subDir)
+	}
+	return proc.ensureDirSeq(dir, subDir)
+}
+
+func (proc *tFileProcessorCP) ensureDirThr(dir, subDir string) error {
+	proc.mutex.Lock()
+	defer proc.mutex.Unlock()
+	for _, existingDir := range proc.existingDirs {
+		if existingDir == dir {
+			return nil
+		}
+	}
+	return proc.ensureDirSeq(dir, subDir)
+}
+
+func (proc *tFileProcessorCP) ensureDirSeq(dir, subDir string) error {
 	info, err := os.Stat(dir)
 	if err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0666)
+		err = os.MkdirAll(dir, 0777)
 		if err == nil || check.FileExists(dir) {
 			proc.existingDirs = append(proc.existingDirs, dir)
 			err = nil
@@ -630,12 +669,13 @@ func printHelp() {
 	message += "OPTION\n"
 	message += "  -o, --or         filter is OR (not AND)\n"
 	message += "  -r, --recursive  recursive file iteration\n"
-	message += "  -s, --silent     don't output errors to screen when reading files"
+	message += "  -s, --silent     don't output errors to screen when reading files\n"
+	message += "  -t, --threads    use threads"
 	fmt.Println(message)
 }
 
 func printVersion() {
-	fmt.Println("1.1.1")
+	fmt.Println("1.2.0")
 }
 
 func printCopyright() {
