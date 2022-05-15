@@ -31,6 +31,7 @@ fbc is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 		-o, --or          filter is OR (not AND)
 		-r, --recursive   recursive file iteration
 		-s, --silent      don't output errors to screen when reading files
+		-t, --threads     use threads
 
 ## Examples
 Copy any file containing the words "alice" and "bob"
