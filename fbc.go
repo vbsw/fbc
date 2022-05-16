@@ -11,7 +11,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/vbsw/golib/check"
+	"github.com/vbsw/golib/check/v2"
 	"github.com/vbsw/golib/iter"
 	"github.com/vbsw/golib/osargs"
 	"io"
@@ -53,6 +53,7 @@ type tFileProcessor interface {
 
 type tFileProcessorDefault struct {
 	count          int
+	inputDirLength int
 	silent         bool
 	or             bool
 	threads        bool
@@ -68,9 +69,8 @@ type tFileProcessorCount struct {
 
 type tFileProcessorCP struct {
 	tFileProcessorDefault
-	existingDirs   []string
-	inputDirLength int
-	outputDir      string
+	existingDirs []string
+	outputDir    string
 }
 
 type tFileProcessorMV struct {
@@ -367,12 +367,15 @@ func newFileProcessor(params *tParameters) tFileProcessor {
 }
 
 func (proc *tFileProcessorDefault) init(params *tParameters) {
+	proc.inputDirLength = dirLengthWOEndingSeparator(params.input.Values[0]) + 1
 	proc.silent = params.silent.Available()
 	proc.or = params.or.Available()
 	proc.threads = params.threads.Available()
 	proc.contentFilter = toBytes(params.contentFilter)
 	proc.fileNameFilter = strings.Split(params.fileNameFilter, "*")
-	proc.buffer = make([]byte, 1024*1024*4)
+	if !proc.threads {
+		proc.buffer = make([]byte, 1024*1024*4)
+	}
 }
 
 func (proc *tFileProcessorDefault) ProcessFile(path string, info os.FileInfo, err error) error {
@@ -440,9 +443,9 @@ func (proc *tFileProcessorDefault) isFileNameMatch(name string) bool {
 func (proc *tFileProcessorDefault) isContentMatch(path string) (bool, error) {
 	if len(proc.contentFilter) > 0 {
 		if proc.or {
-			return check.FileHasAny(path, proc.buffer, proc.contentFilter)
+			return check.FileContainsAny(path, proc.buffer, proc.contentFilter)
 		}
-		return check.FileHasAll(path, proc.buffer, proc.contentFilter)
+		return check.FileContainsAll(path, proc.buffer, proc.contentFilter)
 	}
 	return true, nil
 }
@@ -458,7 +461,6 @@ func (proc *tFileProcessorCount) printSummary(err error) {
 func (proc *tFileProcessorCP) init(params *tParameters) {
 	proc.tFileProcessorDefault.init(params)
 	proc.existingDirs = make([]string, 0, 16)
-	proc.inputDirLength = dirLengthWOEndingSeparator(params.input.Values[0]) + 1
 	proc.outputDir = params.output.Values[0]
 }
 
@@ -560,7 +562,8 @@ func (proc *tFileProcessorPrint) ProcessFile(path string, info os.FileInfo, err 
 	if err == nil && proc.isFileNameMatch(info.Name()) {
 		match, err = proc.isContentMatch(path)
 		if err == nil && match {
-			printName(info.Name())
+			subDir := path[proc.inputDirLength : len(path)-len(info.Name())]
+			printName(filepath.Join(subDir, info.Name()))
 		}
 	}
 	return proc.postProcess(match, err)
